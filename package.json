@@ -7,7 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
+    "start": "node src/server.js & npm run worker & npm run email-worker",
     "worker": "node src/shared/worker/moderation.worker.js",
     "email-worker": "node src/shared/worker/email.worker.js",
     "migrate": "node --dns-result-order=ipv4first src/shared/db/migrate.js"
