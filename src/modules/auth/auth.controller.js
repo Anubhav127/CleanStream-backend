@@ -23,6 +23,7 @@ const loginController = asyncHandler(async (req, res) => {
     const options = {
         httpOnly: true,
         secure: true,
+        sameSite: "none",
     }
 
     return res
@@ -40,6 +41,7 @@ const refreshController = asyncHandler(async (req, res) => {
     const options = {
         httpOnly: true,
         secure: true,
+        sameSite: "none",
     }
 
     return res
@@ -59,6 +61,7 @@ const logoutController = asyncHandler(async (req, res) => {
     const options = {
         httpOnly: true,
         secure: true,
+        sameSite: "none",
     }
 
     if (remSessionId !== null) {
