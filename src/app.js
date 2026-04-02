@@ -20,7 +20,7 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({
-    origin: "*",
+    origin: "https://clean-stream-frontend.vercel.app",
     credentials: true,
 }));
 
