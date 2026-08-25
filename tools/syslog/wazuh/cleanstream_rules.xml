@@ -1,0 +1,106 @@
+<!--
+  CleanStream audit-log rules
+  ===========================
+  Fire on the dynamic fields extracted by cleanstream_decoder.xml (action, outcome,
+  level, userId, ip, ...). Custom rule IDs live in the 100000-120000 user range.
+
+  Field matching uses Wazuh OS_Regex, where a literal "." matches a literal dot
+  (it is NOT "any char" as in PCRE), so ^user.login$ is an exact match.
+
+  Install (on the Wazuh manager): copy this in as a NEW file
+    /var/ossec/etc/rules/cleanstream_rules.xml
+  Wazuh loads every .xml in that directory, so the default local_rules.xml is
+  left untouched, and rule IDs 100100-100131 do not collide with it. Then
+  restart: sudo systemctl restart wazuh-manager
+-->
+
+<group name="cleanstream,audit,">
+
+  <!-- Anchor: any successfully-decoded CleanStream audit event.
+       Level 0 => no alert on its own; it just parents the rules below. -->
+  <rule id="100100" level="0">
+    <decoded_as>cleanstream-audit</decoded_as>
+    <description>CleanStream audit event decoded.</description>
+  </rule>
+
+  <!-- Successful login (informational) -->
+  <rule id="100110" level="3">
+    <if_sid>100100</if_sid>
+    <action>user.login</action>
+    <field name="outcome">^success$</field>
+    <description>CleanStream: successful login (user $(userId), ip $(ip)).</description>
+    <group>authentication_success,pci_dss_10.2.5,</group>
+  </rule>
+
+  <!-- Failed login (suspicious) -->
+  <rule id="100111" level="6">
+    <if_sid>100100</if_sid>
+    <action>user.login</action>
+    <field name="outcome">^failure$</field>
+    <description>CleanStream: failed login (user $(userId), ip $(ip)).</description>
+    <group>authentication_failed,pci_dss_10.2.4,pci_dss_10.2.5,</group>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+  </rule>
+
+  <!-- Brute force against ONE account: repeated failures for the same user.
+       Realistic threshold; with random test users it may not trigger (see 100113). -->
+  <rule id="100112" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>100111</if_matched_sid>
+    <same_field>userId</same_field>
+    <description>CleanStream: possible brute force - 5+ failed logins for the same user in 120s.</description>
+    <group>authentication_failures,pci_dss_11.4,</group>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+  <!-- Failure spike across ANY account - demo-friendly, fires on the random test data. -->
+  <rule id="100113" level="8" frequency="4" timeframe="240">
+    <if_matched_sid>100111</if_matched_sid>
+    <description>CleanStream: spike in failed logins - 4+ failures in 240s (any account).</description>
+    <group>authentication_failures,</group>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+  <!-- Auth rate limit tripped -->
+  <rule id="100120" level="5">
+    <if_sid>100100</if_sid>
+    <action>auth.rate_limited</action>
+    <description>CleanStream: authentication rate limit triggered (ip $(ip)).</description>
+    <group>authentication_failures,</group>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+  <!-- Post created (informational) -->
+  <rule id="100130" level="3">
+    <if_sid>100100</if_sid>
+    <action>post.create</action>
+    <description>CleanStream: post created (user $(userId)).</description>
+  </rule>
+
+  <!-- Post moderated -->
+  <rule id="100131" level="4">
+    <if_sid>100100</if_sid>
+    <action>post.moderated</action>
+    <description>CleanStream: post moderated - outcome $(outcome).</description>
+  </rule>
+
+  <!--
+    Optional catch-all for any error-severity audit event (useful once your real
+    logs carry more actions than the test set). It overlaps rule 100111 on the
+    sample data, so it is left commented out. Uncomment to enable:
+
+    <rule id="100140" level="7">
+      <if_sid>100100</if_sid>
+      <field name="level">^error$</field>
+      <description>CleanStream: audit event with error severity - action $(action).</description>
+    </rule>
+  -->
+
+</group>

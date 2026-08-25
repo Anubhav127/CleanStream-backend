@@ -1,0 +1,55 @@
+<!--
+  CleanStream audit-log decoder
+  ==============================
+  Matches the RFC 3164 syslog the forwarder sends, e.g.:
+
+    <134>Aug  8 01:27:55 host cleanstream-audit: {"level":"error","action":"user.login","outcome":"failure","userId":"u_1004","ip":"10.0.199.227","service":"cleanstream-backend",...}
+
+  Wazuh's syslog pre-decoder strips the <PRI>, timestamp and hostname, and sets
+  program_name = "cleanstream-audit". The parent decoder below matches on that
+  program name; the child then runs JSON_Decoder on the remaining message (the
+  JSON body) and turns every key into a dynamic field: level, action, outcome,
+  userId, ip, service, seq, ts.
+
+  Install (on the Wazuh manager): copy this in as a NEW file
+    /var/ossec/etc/decoders/cleanstream_decoder.xml
+  Wazuh loads every .xml in that directory, so the default local_decoder.xml is
+  left untouched. Then restart: sudo systemctl restart wazuh-manager
+-->
+
+<decoder name="cleanstream-audit">
+  <program_name>^cleanstream-audit$</program_name>
+</decoder>
+
+<decoder name="cleanstream-audit">
+  <parent>cleanstream-audit</parent>
+  <plugin_decoder>JSON_Decoder</plugin_decoder>
+</decoder>
+
+<!--
+  FALLBACK: regex field-extraction (no JSON_Decoder)
+  ==================================================
+  Use this if JSON_Decoder does not decode the syslog-wrapped JSON on your Wazuh
+  version (check with wazuh-logtest). To switch:
+    1. Comment out the JSON_Decoder child decoder above.
+    2. Uncomment the child decoder below.
+  It reuses the same program_name parent above, so leave that parent in place.
+
+  The extracted field names are identical to the JSON_Decoder ones
+  (level, action, outcome, userId, ip, ...), so local_rules.xml needs no changes.
+
+  Trade-off: this regex matches the generator's exact field ORDER
+  (level, action, outcome, ts, seq, userId, ip, service). If a field is missing
+  or reordered the match fails, whereas JSON_Decoder is order-independent.
+
+  Note on OS_Regex: a literal "." matches a literal dot (not "any char"), and
+  "\w" is [A-Za-z0-9_]. Values are matched by their known shapes, e.g. the ISO
+  timestamp as \d+-\d+-\d+T\d+:\d+:\d+.\d+Z and the IP as \d+.\d+.\d+.\d+.
+
+  <decoder name="cleanstream-audit">
+    <parent>cleanstream-audit</parent>
+    <regex>"level":"(\w+)","action":"(\w+.\w+)","outcome":"(\w+)","ts":"(\d+-\d+-\d+T\d+:\d+:\d+.\d+Z)","seq":(\d+),"userId":"(\w+)","ip":"(\d+.\d+.\d+.\d+)","service":"(\w+-\w+)"</regex>
+    <order>level, action, outcome, ts, seq, userId, ip, service</order>
+  </decoder>
+-->
+

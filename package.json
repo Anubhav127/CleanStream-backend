@@ -10,7 +10,11 @@
     "start": "node src/server.js & npm run worker & npm run email-worker",
     "worker": "node src/shared/worker/moderation.worker.js",
     "email-worker": "node src/shared/worker/email.worker.js",
-    "migrate": "node --dns-result-order=ipv4first src/shared/db/migrate.js"
+    "migrate": "node --dns-result-order=ipv4first src/shared/db/migrate.js",
+    "audit:gen": "node tools/syslog/log-generator.js",
+    "forward": "node tools/syslog/syslog-forwarder.js",
+    "forward:udp": "node tools/syslog/syslog-forwarder.js --udp",
+    "forward:tcp": "node tools/syslog/syslog-forwarder.js --tcp"
   },
   "keywords": [],
   "author": "",
