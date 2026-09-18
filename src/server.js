@@ -6,6 +6,8 @@ import { connection as redis } from './shared/config/redis.js';
 import { emailQueue } from './shared/queue/email.queue.js';
 import { moderationQueue } from './shared/queue/moderation.queue.js';
 
+const port = Number(process.env.PORT) || 10000;
+
 // Graceful Start
 const start = async () => {
     try {
@@ -18,8 +20,8 @@ const start = async () => {
         logger.info(`Redis connected (ping: ${redisPing})`);
 
         // 3. Start HTTP server
-        const server = app.listen(8000, () => {
-            logger.info(`Server running on port ${env.PORT} [${env.NODE_ENV}]`);
+        const server = app.listen(port, '0.0.0.0', () => {
+            logger.info(`Server running on port ${port} [${env.NODE_ENV}]`);
         });
 
         // Graceful Shutdown
