@@ -18,7 +18,7 @@ const start = async () => {
         logger.info(`Redis connected (ping: ${redisPing})`);
 
         // 3. Start HTTP server
-        const server = app.listen(env.PORT, () => {
+        const server = app.listen(8000, () => {
             logger.info(`Server running on port ${env.PORT} [${env.NODE_ENV}]`);
         });
 
